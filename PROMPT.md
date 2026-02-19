@@ -1,0 +1,239 @@
+**MINIONS ARGUMENTS — ARGUMENT MAPPER**
+
+You are tasked with creating the complete initial foundation for **minions-arguments** — structured reasoning and debate. This is part of the Minions ecosystem, a universal structured object system designed for building AI-native tools.
+
+---
+
+**PROJECT OVERVIEW**
+
+`minions-arguments` is a structured system for mapping, analyzing, and evaluating arguments. It tracks claims, evidence, counterarguments, assumptions, and conclusions as minions — enabling rigorous reasoning that can be inspected, challenged, and refined.
+
+The core value: most reasoning is implicit and unstructured. This makes it explicit, allowing agents to evaluate argument strength, detect logical fallacies, find weak points, and construct stronger arguments.
+
+This project is built on the Minions SDK (`minions-sdk`), which provides the foundational primitives: Minion (structured object instance), MinionType (schema), and Relation (typed link between minions).
+
+The system supports both TypeScript and Python SDKs with cross-language interoperability (both serialize to the same JSON format). All documentation includes dual-language code examples with tabbed interfaces.
+
+---
+
+**MINIONS SDK REFERENCE — REQUIRED DEPENDENCY**
+
+This project depends on `minions-sdk`, a published package that provides the foundational primitives. The GH Agent building this project MUST install it from the public registries and use the APIs documented below — do NOT reimplement minions primitives from scratch.
+
+**Installation:**
+```bash
+# TypeScript (npm)
+npm install minions-sdk
+
+# Python (PyPI) — package name is minions-sdk, but you import as "minions"
+pip install minions-sdk
+```
+
+**TypeScript SDK — Core Imports:**
+```typescript
+import {
+  type Minion, type MinionType, type Relation,
+  type FieldDefinition, type FieldValidation, type FieldType,
+  type CreateMinionInput, type UpdateMinionInput, type CreateRelationInput,
+  type ValidationError, type ValidationResult,
+  validateField, validateFields,
+  noteType, linkType, fileType, contactType,
+  agentType, teamType, thoughtType, promptTemplateType, testCaseType, taskType,
+  builtinTypes, TypeRegistry, RelationGraph,
+  createMinion, updateMinion, softDelete, hardDelete, restoreMinion,
+  migrateMinion, generateId, now, SPEC_VERSION,
+} from 'minions-sdk';
+```
+
+**Python SDK — Core Imports:**
+```python
+from minions import (
+    Minion, MinionType, Relation, FieldDefinition, FieldValidation,
+    CreateMinionInput, UpdateMinionInput, CreateRelationInput,
+    ValidationError, ValidationResult,
+    validate_field, validate_fields,
+    note_type, link_type, file_type, contact_type,
+    agent_type, team_type, thought_type, prompt_template_type,
+    test_case_type, task_type, builtin_types,
+    TypeRegistry, RelationGraph,
+    create_minion, update_minion, soft_delete, hard_delete, restore_minion,
+    migrate_minion, generate_id, now, SPEC_VERSION,
+)
+```
+
+**Key Concepts:**
+- `MinionType` = schema (list of `FieldDefinition`s). `Minion` = instance. `Relation` = typed link.
+- 12 field types: `string`, `number`, `boolean`, `date`, `select`, `multi-select`, `url`, `email`, `textarea`, `tags`, `json`, `array`
+- 12 relation types: `parent_of`, `depends_on`, `implements`, `relates_to`, `inspired_by`, `triggers`, `references`, `blocks`, `alternative_to`, `part_of`, `follows`, `integration_link`
+- `TypeRegistry` auto-loads 10 built-in types; register custom types with `registry.register(myType)`
+- `createMinion(input, type)` validates fields and returns `{ minion, validation }` (TS) or `(minion, validation)` (Python)
+- Both SDKs serialize to identical camelCase JSON; Python `to_dict()` / `from_dict()` handles conversion
+
+**IMPORTANT:** Do NOT recreate these primitives. Import from `minions-sdk` (npm) / `minions` (PyPI). Build domain-specific types ON TOP of the SDK.
+
+
+---
+
+**CORE PRIMITIVES**
+
+This project defines the following Minion Types:
+
+1. **`claim`** — A statement being argued for or against
+   - Fields: `statement` (textarea, required), `claimType` (select: factual/normative/causal/predictive), `confidence` (number, 0-1), `status` (select: proposed/supported/contested/refuted)
+   - Relations: `parent_of` → sub-claims, `references` → evidence
+
+2. **`evidence`** — Supporting data for a claim
+   - Fields: `content` (textarea, required), `sourceUrl` (url), `sourceType` (select: empirical/anecdotal/expert/statistical), `strength` (number, 0-1), `verified` (boolean)
+   - Relations: `references` → claim (supports)
+
+3. **`counterargument`** — An opposing position to a claim
+   - Fields: `content` (textarea, required), `targetsClaim` (string), `strength` (number, 0-1), `rebuttal` (textarea)
+   - Relations: `blocks` → claim
+
+4. **`assumption`** — An unstated premise underlying a claim
+   - Fields: `statement` (textarea, required), `isExplicit` (boolean), `isContested` (boolean), `impact` (select: critical/moderate/minor)
+   - Relations: `part_of` → claim
+
+5. **`conclusion`** — A derived position from the argument
+   - Fields: `statement` (textarea, required), `confidence` (number, 0-1), `derivedFrom` (json), `caveats` (textarea)
+   - Relations: `depends_on` → claims
+
+6. **`fallacy`** — A detected logical error
+   - Fields: `name` (string, required), `fallacyType` (select: formal/informal), `description` (textarea), `example` (textarea)
+   - Relations: `references` → claim (where detected)
+
+---
+
+**BEYOND STANDARD PATTERN**
+
+- `ArgumentGraph` with support/attack relation traversal
+- Fallacy detector matching argument patterns against known fallacy templates
+- Argument strength score based on evidence count and source quality
+- `steelman(claimId)` generating the strongest version of an opposing view
+- Socratic mode in CLI — interactively challenges weak claims
+
+---
+
+**CLI COMMANDS**
+
+```bash
+arguments claim new "AI will replace programmers"
+arguments evidence add <claim-id> "Study: 40% of code already AI-generated"
+arguments counter add <claim-id> "Complex systems still require human oversight"
+arguments weak-points <claim-id>
+arguments steelman <claim-id>
+arguments map <topic> --output graph.json
+```
+
+---
+
+**AGENT SKILL VALUE**
+
+Agents can construct, evaluate, and defend structured arguments. Critical for decision-making, research synthesis, and adversarial reasoning.
+
+---
+
+**DUAL SDK REQUIREMENTS**
+
+Critical cross-language compatibility requirements:
+
+**Serialization Parity**
+- Both TypeScript and Python SDKs must serialize minions to identical JSON format
+- Field names, types, and structure must match exactly
+
+**API Consistency**
+- Same method names (adjusted for language conventions: TypeScript camelCase, Python snake_case)
+- Same parameters and return types
+
+**Documentation Parity**
+- Every code example must have both TypeScript and Python versions
+- Use Astro Starlight tabs: `<Tabs><TabItem label="TypeScript">...</TabItem><TabItem label="Python">...</TabItem></Tabs>`
+
+---
+
+**PROJECT STRUCTURE**
+
+Standard Minions ecosystem monorepo structure:
+
+```
+minions-arguments/
+  packages/
+    core/                 # TypeScript core library
+      src/
+        types.ts
+        index.ts
+      test/
+      package.json
+    python/               # Python SDK
+      minions_arguments/
+        __init__.py
+        types.py
+      tests/
+      pyproject.toml
+    cli/                  # CLI tool
+      src/
+        commands/
+        index.ts
+      package.json
+  apps/
+    docs/                 # Astro Starlight documentation
+  spec/
+    v0.1.md
+  examples/
+    typescript/
+    python/
+  .github/
+    workflows/
+      ci.yml
+      publish.yml
+  README.md
+  LICENSE                # AGPL-3.0
+  package.json
+```
+
+---
+
+**WHAT YOU NEED TO CREATE**
+
+**1. THE SPECIFICATION** (`/spec/v0.1.md`)
+Write a complete markdown specification covering all minion types, field schemas, relation patterns, and domain-specific algorithms.
+
+**2. THE CORE LIBRARY** (`/packages/core`)
+A framework-agnostic TypeScript library built on `minions-sdk`. Full type definitions, domain-specific classes, and utilities.
+
+**3. THE PYTHON SDK** (`/packages/python`)
+Complete Python port with identical functionality. Published to PyPI as `minions-arguments`.
+
+**4. THE CLI** (`/packages/cli`)
+All commands listed above, with interactive modes and JSON output support.
+
+**5. THE DOCUMENTATION SITE** (`/apps/docs`)
+Built with Astro Starlight. Landing page, getting started, concepts, API reference, guides — all with dual TypeScript/Python examples.
+
+---
+
+**DELIVERABLES**
+
+Produce all files necessary to bootstrap this project completely. Every file should be production quality — not stubs, not placeholders.
+
+1. Full specification (`/spec/v0.1.md`)
+2. TypeScript core library (`/packages/core`)
+3. Python SDK (`/packages/python`)
+4. CLI tool (`/packages/cli`)
+5. Documentation site (`/apps/docs`)
+6. README with concrete examples
+7. Examples in both TypeScript and Python
+8. CI/CD setup (lint, test, publish for both languages)
+
+---
+
+**START SYSTEMATICALLY**
+
+1. Write the specification first — nail down the schemas and domain algorithms
+2. Implement TypeScript core library with full type definitions
+3. Port to Python maintaining exact serialization compatibility
+4. Build CLI using the core library
+5. Write documentation with dual-language examples throughout
+6. Create working examples
+
+This is a foundational tool for the Minions ecosystem. Get it right.
